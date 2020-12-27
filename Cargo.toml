@@ -4,4 +4,19 @@ version = "0.1.0"
 authors = ["nil <nil@kobold.dev>"]
 edition = "2018"
 
-[dependencies]
+[dependencies.tokio]
+version = "0.2"
+features = [
+   "rt-threaded",
+   "macros",
+]
+
+[dependencies.serenity]
+version = "0.9"
+default-features = false
+features = [
+   "client",
+   "gateway",
+   "rustls_backend",
+   "model",
+]
