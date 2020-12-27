@@ -1,0 +1,7 @@
+[package]
+name = "kobot"
+version = "0.1.0"
+authors = ["nil <nil@kobold.dev>"]
+edition = "2018"
+
+[dependencies]
