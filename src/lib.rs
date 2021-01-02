@@ -3,6 +3,7 @@ use tokio::runtime::Runtime;
 use bot::Bot;
 
 mod bot;
+mod command;
 
 pub fn run<T: AsRef<str>>(token: T) -> Result<(), Box<dyn std::error::Error>> {
    let mut rt = Runtime::new()?;
