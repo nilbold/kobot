@@ -5,11 +5,15 @@ use bot::Bot;
 mod bot;
 mod command;
 
-pub fn run<T: AsRef<str>>(token: T) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run<T, U>(token: T, redis_url: U) -> Result<(), Box<dyn std::error::Error>>
+where
+   T: AsRef<str>,
+   U: AsRef<str>,
+{
    let mut rt = Runtime::new()?;
 
    rt.block_on(async {
-      let bot = Bot::new(token.as_ref().into()).await?;
+      let bot = Bot::new(token.as_ref(), redis_url).await?;
 
       bot.connect().await
    })

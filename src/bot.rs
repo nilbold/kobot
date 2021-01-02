@@ -1,5 +1,7 @@
+use std::ops::Deref;
 use std::sync::Arc;
 
+use redis;
 use serenity::{
    async_trait,
    http::Http,
@@ -19,12 +21,34 @@ impl TypeMapKey for BotInfo {
    type Value = Arc<BotInfo>;
 }
 
+pub struct RedisClient(redis::Client);
+
+impl Deref for RedisClient {
+   type Target = redis::Client;
+
+   fn deref(&self) -> &Self::Target {
+      &self.0
+   }
+}
+
+impl TypeMapKey for RedisClient {
+   type Value = Arc<RedisClient>;
+}
+
 pub struct Bot {
    pub info: Arc<BotInfo>,
+   pub redis: Arc<RedisClient>,
 }
 
 impl Bot {
-   pub async fn new(token: String) -> Result<Bot, Box<dyn std::error::Error>> {
+   pub async fn new<T, U>(token: T, redis_url: U) -> Result<Bot, Box<dyn std::error::Error>>
+   where
+      T: Into<String>,
+      U: AsRef<str>,
+   {
+      let token = token.into();
+      let redis = redis::Client::open(redis_url.as_ref()).expect("redis client open");
+
       let http = Http::new_with_token(&token);
       let info = http.get_current_application_info().await?;
 
@@ -34,6 +58,7 @@ impl Bot {
             owner: info.owner.id,
             token: token,
          }),
+         redis: Arc::new(RedisClient(redis)),
       })
    }
 
@@ -45,6 +70,7 @@ impl Bot {
       {
          let mut data = client.data.write().await;
          data.insert::<BotInfo>(self.info.clone());
+         data.insert::<RedisClient>(self.redis.clone());
       }
 
       client.start().await?;

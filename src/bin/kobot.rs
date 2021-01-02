@@ -7,9 +7,12 @@ fn main() {
 
    //let _args = &env::args_os().collect::<Vec<_>>();
 
-   let token = env::var("DISCORD_TOKEN").expect("discord token");
+   let (token, redis_url) = (
+      env::var("DISCORD_TOKEN").expect("discord token in env"),
+      env::var("REDIS_URL").expect("redis url in env"),
+   );
 
-   if let Err(why) = kobot::run(&token) {
+   if let Err(why) = kobot::run(&token, &redis_url) {
       eprintln!("error during bot run: {:?}", why);
       std::process::exit(1);
    }

@@ -20,3 +20,9 @@ features = [
    "rustls_backend",
    "model",
 ]
+
+[dependencies.redis]
+redis = "0.19"
+features = [
+   "tokio-comp",
+]
