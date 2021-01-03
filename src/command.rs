@@ -1,10 +1,10 @@
 use redis::AsyncCommands;
 use serenity::{model::channel::Message, prelude::*};
 
-use crate::bot::{BotInfo, RedisClient};
+use crate::bot::{BotInfo, RedisClient, ChannelListen};
 
 // kobot lives here
-pub async fn channel_register(context: Context, message: Message) {
+pub async fn channel_register(context: &Context, message: Message) {
    let channel = {
       let channel = match message.channel_id.to_channel(&context).await {
          Ok(channel) => channel,
@@ -35,7 +35,7 @@ pub async fn channel_register(context: Context, message: Message) {
       }
    };
 
-   let (owner, redis) = {
+   let (owner, redis, listen) = {
       let data_read = context.data.read().await;
       (
          data_read
@@ -46,6 +46,10 @@ pub async fn channel_register(context: Context, message: Message) {
          data_read
             .get::<RedisClient>()
             .expect("RedisClient in TypeMap")
+            .clone(),
+         data_read
+            .get::<ChannelListen>()
+            .expect("ChannelListen in TypeMap")
             .clone(),
       )
    };
@@ -87,6 +91,8 @@ pub async fn channel_register(context: Context, message: Message) {
          return;
       }
    }
+
+   listen.write().unwrap().insert(u64::from(channel.id));
 
    {
       let text = format!(
