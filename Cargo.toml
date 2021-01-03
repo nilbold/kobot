@@ -16,13 +16,14 @@ version = "0.9"
 default-features = false
 features = [
    "client",
+   "cache",
    "gateway",
    "rustls_backend",
    "model",
 ]
 
 [dependencies.redis]
-redis = "0.19"
+version = "0.16"
 features = [
    "tokio-comp",
 ]

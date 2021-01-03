@@ -1,13 +1,36 @@
+use redis::AsyncCommands;
 use serenity::{model::channel::Message, prelude::*};
 
 use crate::bot::{BotInfo, RedisClient};
 
 // kobot lives here
 pub async fn channel_register(context: Context, message: Message) {
-   let channel = match message.channel_id.to_channel(&context).await {
-      Ok(channel) => channel,
-      Err(why) => {
-         eprintln!("error getting channel: {:?}", why);
+   let channel = {
+      let channel = match message.channel_id.to_channel(&context).await {
+         Ok(channel) => channel,
+         Err(why) => {
+            eprintln!("error getting channel: {:?}", why);
+            return;
+         }
+      };
+
+      // using .guild() instead of something named like .guild_channel() is a tad
+      // confusing, no?
+      match channel.guild() {
+         Some(guild_channel) => guild_channel,
+         None => {
+            println!("listen request for non-guild channel, ignoring");
+            return;
+         }
+      }
+   };
+
+   // case in point, this gets the actual guild, not just the guild channel,
+   // despite the same function name
+   let server = match channel.guild(&context.cache).await {
+      Some(guild) => guild,
+      None => {
+         println!("could not find the guild matching this channel, ignoring");
          return;
       }
    };
@@ -33,7 +56,7 @@ pub async fn channel_register(context: Context, message: Message) {
          .direct_message(&context, |m| {
             m.content(format!(
                "you're not authorized to control kobot! (from: {})",
-               channel
+               channel.name
             ))
          })
          .await;
@@ -45,25 +68,39 @@ pub async fn channel_register(context: Context, message: Message) {
    }
 
    {
-      let mut _con = redis.get_connection().unwrap();
-      // TODO: register channel (redis?)
+      let mut con = redis.get_async_connection().await.unwrap();
+
+      let res: i64 = match con.sadd("listen", u64::from(channel.id)).await {
+         Ok(res) => res,
+         Err(why) => {
+            eprintln!("error with redis sadd: {:?}", why);
+            return;
+         }
+      };
+
+      // nothing added to the set? channel is already registered
+      if res == 0 {
+         let text = "kobot is already listening here!";
+         if let Err(why) = channel.say(&context.http, text).await {
+            eprintln!("error sending reply: {:?}", why);
+         }
+         return;
+      }
    }
 
-   let reply = message
-      .channel_id
-      .say(
-         &context.http,
-         format!("yip! kobot now lives in {} (listen mode enabled)", channel),
-      )
-      .await;
-   if let Err(why) = reply {
-      eprintln!("error sending reply: {:?}", why);
-
-      return;
+   {
+      let text = format!(
+         "yip! kobot now lives in {} {} (listen mode enabled)",
+         server.name, channel
+      );
+      if let Err(why) = channel.say(&context.http, text).await {
+         eprintln!("error sending reply: {:?}", why);
+         return;
+      }
    }
 
    println!(
-      "now listening to {} (enabled by {})",
-      channel, message.author.name
+      "now listening to {} #{} (enabled by {})",
+      server.name, channel.name, message.author.name
    )
 }
