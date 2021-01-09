@@ -1,9 +1,11 @@
 use tokio::runtime::Runtime;
 
 use bot::Bot;
+use error::KobotError;
 
 mod bot;
 mod command;
+mod error;
 
 pub fn run<T, U>(token: T, redis_url: U) -> Result<(), Box<dyn std::error::Error>>
 where

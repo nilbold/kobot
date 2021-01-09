@@ -4,6 +4,9 @@ version = "0.1.2"
 authors = ["nil <nil@kobold.dev>"]
 edition = "2018"
 
+[dependencies]
+thiserror = "1"
+
 [dependencies.tokio]
 version = "0.2"
 features = [
