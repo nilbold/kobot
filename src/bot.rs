@@ -1,14 +1,18 @@
+use std::collections::HashSet;
+use std::error::Error;
+use std::fmt::{self, Display, Formatter};
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
-use std::collections::HashSet;
-use std::fmt::{self, Display, Formatter};
-use std::error::Error;
 
 use redis::{self, AsyncCommands};
 use serenity::{
    async_trait,
    http::Http,
-   model::{channel::Message, gateway::Ready, id::{UserId, ChannelId}},
+   model::{
+      channel::Message,
+      gateway::Ready,
+      id::{ChannelId, UserId},
+   },
    prelude::*,
 };
 
@@ -76,7 +80,10 @@ impl Bot {
          match con.smembers("listen").await {
             Ok(res) => res,
             Err(why) => {
-               eprintln!("error with redis, could not retrieve listen list: {:?}", why);
+               eprintln!(
+                  "error with redis, could not retrieve listen list: {:?}",
+                  why
+               );
                return Err(BotInitError.into());
             }
          }

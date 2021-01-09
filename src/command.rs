@@ -1,7 +1,7 @@
 use redis::AsyncCommands;
 use serenity::{model::channel::Message, prelude::*};
 
-use crate::bot::{BotInfo, RedisClient, ChannelListen};
+use crate::bot::{BotInfo, ChannelListen, RedisClient};
 
 // kobot lives here
 pub async fn channel_register(context: &Context, message: Message) {
