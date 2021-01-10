@@ -1,3 +1,5 @@
+//! bot commands
+
 use redis::AsyncCommands;
 use serenity::{model::{channel::{GuildChannel, Message}, guild::Guild}, prelude::*};
 
@@ -116,3 +118,5 @@ pub async fn channel_register(context: &Context, message: &Message) {
       server.name, channel.name, message.author.name
    )
 }
+
+// ex:expandtab sw=3 ts=3

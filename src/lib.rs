@@ -7,6 +7,9 @@ mod bot;
 mod command;
 mod error;
 
+/// create and run the bot
+/// 
+/// iniitlizes the async runtime before connecting to discord and redis
 pub fn run<T, U>(token: T, redis_url: U) -> Result<()>
 where
    T: AsRef<str>,

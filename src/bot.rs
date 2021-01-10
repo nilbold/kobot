@@ -1,3 +1,5 @@
+//! bot definition and event handler
+
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
@@ -17,6 +19,7 @@ use serenity::{
 use crate::command;
 use crate::error::{KobotError, Result};
 
+/// bot information meant to be shared inside the message handler
 pub struct BotInfo {
    pub id: UserId,
    pub owner: UserId,
@@ -47,6 +50,7 @@ impl TypeMapKey for ChannelListen {
    type Value = Arc<RwLock<HashSet<u64>>>;
 }
 
+/// `Bot` information and Redis connection
 pub struct Bot {
    pub info: Arc<BotInfo>,
    pub redis: Arc<RedisClient>,
@@ -54,6 +58,9 @@ pub struct Bot {
 }
 
 impl Bot {
+   /// create a bot instance
+   /// 
+   /// sets up the redis client and queries discord for bot info
    pub async fn new<T, U>(token: T, redis_url: U) -> Result<Bot>
    where
       T: Into<String>,
@@ -91,6 +98,9 @@ impl Bot {
       })
    }
 
+   /// connect the bot
+   /// 
+   /// builds and starts the discord client connection
    pub async fn connect(&self) -> Result<()> {
       let mut client = {
          let c = Client::builder(&self.info.token)
@@ -116,6 +126,7 @@ impl Bot {
 struct Handler;
 
 impl Handler {
+   /// check if kobot should be paying attenion to this channel
    async fn listens_to(&self, context: &Context, channel_id: ChannelId) -> bool {
       let listen = {
          let data_read = context.data.read().await;
@@ -151,3 +162,5 @@ impl EventHandler for Handler {
       println!("{} is connected!", ready.user.name);
    }
 }
+
+// ex:expandtab sw=3 ts=3
