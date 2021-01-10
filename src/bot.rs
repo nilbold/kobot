@@ -134,7 +134,7 @@ impl Handler {
 impl EventHandler for Handler {
    async fn message(&self, context: Context, message: Message) {
       if message.content == "kobot lives here" {
-         command::channel_register(&context, message).await;
+         command::channel_register(&context, &message).await;
          return;
       }
 
