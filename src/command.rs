@@ -1,38 +1,58 @@
+//! bot commands
+
 use redis::AsyncCommands;
-use serenity::{model::channel::Message, prelude::*};
+use serenity::{model::{channel::{GuildChannel, Message}, guild::Guild}, prelude::*};
 
-use crate::bot::{BotInfo, RedisClient, ChannelListen};
+use crate::bot::{BotInfo, ChannelListen, RedisClient};
 
-// kobot lives here
-pub async fn channel_register(context: &Context, message: Message) {
-   let channel = {
-      let channel = match message.channel_id.to_channel(&context).await {
-         Ok(channel) => channel,
-         Err(why) => {
-            eprintln!("error getting channel: {:?}", why);
-            return;
-         }
-      };
+async fn respond_not_authorized(context: &Context, message: &Message, channel_name: &str) {
+   let dm = message
+      .author
+      .direct_message(&context, |m| {
+         m.content(format!(
+            "you're not authorized to control kobot! (from: {})",
+            channel_name
+         ))
+      })
+      .await;
+   if let Err(why) = dm {
+      eprintln!("error sending dm: {:?}", why);
+   }
+}
 
-      // using .guild() instead of something named like .guild_channel() is a tad
-      // confusing, no?
-      match channel.guild() {
-         Some(guild_channel) => guild_channel,
-         None => {
-            println!("listen request for non-guild channel, ignoring");
-            return;
-         }
+async fn get_channel_and_server(context: &Context, message: &Message) -> Option<(GuildChannel, Guild)> {
+   let channel = match message.channel_id.to_channel(&context).await {
+      Ok(channel) => channel.guild(),
+      Err(why) => {
+         eprintln!("error getting channel: {:?}", why);
+         return None;
       }
    };
 
-   // case in point, this gets the actual guild, not just the guild channel,
-   // despite the same function name
+   let channel = match channel {
+      Some(c) => c,
+      None => {
+         println!("listen request for non-guild channel, ignoring");
+         return None;
+      },
+   };
+
    let server = match channel.guild(&context.cache).await {
-      Some(guild) => guild,
+      Some(s) => s,
       None => {
          println!("could not find the guild matching this channel, ignoring");
-         return;
-      }
+         return None;
+      },
+   };
+
+   Some((channel, server))
+}
+
+// kobot lives here
+pub async fn channel_register(context: &Context, message: &Message) {
+   let (channel, server) = match get_channel_and_server(context, message).await {
+      Some(cs) => cs,
+      None => return,
    };
 
    let (owner, redis, listen) = {
@@ -55,19 +75,7 @@ pub async fn channel_register(context: &Context, message: Message) {
    };
 
    if message.author.id != owner {
-      let dm = message
-         .author
-         .direct_message(&context, |m| {
-            m.content(format!(
-               "you're not authorized to control kobot! (from: {})",
-               channel.name
-            ))
-         })
-         .await;
-      if let Err(why) = dm {
-         eprintln!("error sending dm: {:?}", why);
-      }
-
+      respond_not_authorized(context, message, &channel.name).await;
       return;
    }
 
@@ -110,3 +118,5 @@ pub async fn channel_register(context: &Context, message: Message) {
       server.name, channel.name, message.author.name
    )
 }
+
+// ex:expandtab sw=3 ts=3
