@@ -1,6 +1,4 @@
 use std::collections::HashSet;
-use std::error::Error;
-use std::fmt::{self, Display, Formatter};
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
@@ -17,6 +15,7 @@ use serenity::{
 };
 
 use crate::command;
+use crate::error::{KobotError, Result};
 
 pub struct BotInfo {
    pub id: UserId,
@@ -48,17 +47,6 @@ impl TypeMapKey for ChannelListen {
    type Value = Arc<RwLock<HashSet<u64>>>;
 }
 
-#[derive(Debug, Clone)]
-struct BotInitError;
-
-impl Display for BotInitError {
-   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-      write!(f, "could not initialize the bot")
-   }
-}
-
-impl Error for BotInitError {}
-
 pub struct Bot {
    pub info: Arc<BotInfo>,
    pub redis: Arc<RedisClient>,
@@ -66,7 +54,7 @@ pub struct Bot {
 }
 
 impl Bot {
-   pub async fn new<T, U>(token: T, redis_url: U) -> Result<Bot, Box<dyn Error>>
+   pub async fn new<T, U>(token: T, redis_url: U) -> Result<Bot>
    where
       T: Into<String>,
       U: AsRef<str>,
@@ -75,7 +63,7 @@ impl Bot {
       let redis = redis::Client::open(redis_url.as_ref()).expect("redis client open");
 
       let listen: HashSet<u64> = {
-         let mut con = redis.get_async_connection().await.unwrap();
+         let mut con = redis.get_async_connection().await?;
 
          match con.smembers("listen").await {
             Ok(res) => res,
@@ -84,7 +72,7 @@ impl Bot {
                   "error with redis, could not retrieve listen list: {:?}",
                   why
                );
-               return Err(BotInitError.into());
+               return Err(why.into());
             }
          }
       };
@@ -103,10 +91,13 @@ impl Bot {
       })
    }
 
-   pub async fn connect(&self) -> Result<(), Box<dyn std::error::Error>> {
-      let mut client = Client::builder(&self.info.token)
-         .event_handler(Handler)
-         .await?;
+   pub async fn connect(&self) -> Result<()> {
+      let mut client = {
+         let c = Client::builder(&self.info.token)
+            .event_handler(Handler)
+            .await;
+         c.map_err(KobotError::ClientCreate)?
+      };
 
       {
          let mut data = client.data.write().await;
